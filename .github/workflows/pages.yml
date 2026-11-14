@@ -23,8 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # ブラウザ版はruby.wasmでlib/*.rbを動かすため、public/と一緒に置く
+      - name: Build site
+        run: |
+          mkdir -p _site/ruby/lib
+          cp -r public/. _site/
+          cp lib/*.rb _site/ruby/lib/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

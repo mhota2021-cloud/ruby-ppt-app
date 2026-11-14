@@ -329,7 +329,8 @@ window.I18N = (function() {
       "msg.invalidProjectFile": "無効なプロジェクトファイルです",
       "msg.syncConflict": "【同期競合の検出】\nサーバー側で新しい変更が見つかりました。\n\n・OK: サーバーの最新データを取り込みます\n・キャンセル: 手元のデータを別名コピーとして保持します",
       "msg.serverGenFail": "Rubyサーバーでのコード生成に失敗した (HTTP {status})",
-      "msg.serverParseFail": "Rubyコードの解析に失敗した (HTTP {status})"
+      "msg.serverParseFail": "Rubyコードの解析に失敗した (HTTP {status})",
+      "ruby.loading": "Ruby実行環境を読み込み中…（初回のみ約30MB）"
     },
     en: {
       "app.title": "PowerPoint Shape & Text Editor (Ruby Edition)",
@@ -646,7 +647,8 @@ window.I18N = (function() {
       "msg.invalidProjectFile": "Invalid project file.",
       "msg.syncConflict": "[Sync Conflict Detected]\nNewer changes were found on the server.\n\n- OK: Load latest data from server\n- Cancel: Keep local edits as a copy",
       "msg.serverGenFail": "Ruby server code generation failed (HTTP {status})",
-      "msg.serverParseFail": "Ruby code parsing failed (HTTP {status})"
+      "msg.serverParseFail": "Ruby code parsing failed (HTTP {status})",
+      "ruby.loading": "Loading the Ruby runtime… (about 30 MB, first time only)"
     }
   };
 

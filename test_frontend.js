@@ -115,6 +115,7 @@ vm.createContext(sandbox);
   "public/js/text_warp.js",
   "public/js/canvas.js",
   "public/js/exporter.js",
+  "public/js/ruby_backend.js",
   "public/js/ruby_code_generator.js",
   "public/js/sync_manager.js"
 ].forEach(file => {

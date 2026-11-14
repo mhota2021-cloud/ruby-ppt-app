@@ -713,6 +713,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // サーバーへ保存
     try {
+      if (window.RubyBackend && !(await RubyBackend.hasServer())) throw new Error("offline");
       await fetch("/api/export/ruby", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -775,20 +776,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!shape || shape.type !== "math_plot") return;
     const cfg = shape.mathConfig || {};
     try {
-      const res = await fetch("/api/math/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: cfg.mode || "function",
-          expr: cfg.expr || "sin(x)",
-          xMin: cfg.xMin ?? -4,
-          xMax: cfg.xMax ?? 4,
-          yMin: cfg.yMin ?? -3,
-          yMax: cfg.yMax ?? 3,
-          steps: cfg.steps ?? 120,
-          lang: window.I18N ? I18N.getLang() : "ja"
-        })
-      });
+      const res = await RubyBackend.request("POST", "/api/math/evaluate", JSON.stringify({
+        mode: cfg.mode || "function",
+        expr: cfg.expr || "sin(x)",
+        xMin: cfg.xMin ?? -4,
+        xMax: cfg.xMax ?? 4,
+        yMin: cfg.yMin ?? -3,
+        yMax: cfg.yMax ?? 3,
+        steps: cfg.steps ?? 120,
+        lang: window.I18N ? I18N.getLang() : "ja"
+      }));
       const result = await res.json();
       if (result && result.success) {
         shape.mathData = result;
@@ -897,6 +894,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadMathPresets() {
     try {
+      // サーバーが無いときは、起動時に30MBのruby.wasmを読まないようJS側の既定プリセットを使う
+      if (!(await RubyBackend.hasServer())) throw new Error("offline");
       const res = await fetch("/api/math/presets");
       const data = await res.json();
       if (data && data.success && Array.isArray(data.presets) && data.presets.length > 0) {

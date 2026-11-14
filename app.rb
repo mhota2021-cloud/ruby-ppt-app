@@ -13,6 +13,7 @@ require_relative "lib/renderer"
 require_relative "lib/ruby_code_generator"
 require_relative "lib/ruby_code_parser"
 require_relative "lib/math_formula"
+require_relative "lib/api_core"
 
 module PPTApp
   VERSION = "1.1.0"
@@ -85,7 +86,7 @@ module PPTApp
       elsif path == "/api/math/presets"
         res.status = 200
         res["Content-Type"] = "application/json; charset=utf-8"
-        res.body = JSON.generate({ success: true, presets: MathFormula::FUNCTION_PRESETS })
+        res.body = JSON.generate(ApiCore.math_presets)
       elsif path == "/api/sync/projects"
         handle_list_projects(req, res)
       elsif path.start_with?("/api/sync/projects/")
@@ -154,16 +155,11 @@ module PPTApp
       res["Content-Type"] = "application/json; charset=utf-8"
       warn "[API] #{e.class}: #{e.message}"
       warn e.backtrace.first(5).join("\n") if e.backtrace
-      # 自分でraiseした入力エラー（RuntimeError・FormulaError）だけ文言を返し、それ以外は内部情報を伏せる
-      message = e.instance_of?(RuntimeError) || e.class.name.to_s.end_with?("FormulaError") ? e.message : "Internal server error"
-      res.body = JSON.generate({ error: message })
+      res.body = JSON.generate({ error: ApiCore.public_error_message(e) })
     end
 
     def parse_json_body(req)
-      return {} if req.body.nil? || req.body.strip.empty?
-      JSON.parse(req.body)
-    rescue => e
-      raise "Invalid JSON body: #{e.message}"
+      ApiCore.parse_json_body(req.body)
     end
 
     # プロジェクト保存ファイルパス
@@ -329,20 +325,9 @@ module PPTApp
     # Rubyコードエクスポート処理
     def handle_export_ruby(req, res)
       data = parse_json_body(req)
-      ruby_code = if data["project"].is_a?(Hash)
-                    PPTApp::RubyCodeGenerator.generate_from_project(
-                      data["project"],
-                      crop_to_shapes: !!data["cropToShapes"]
-                    )
-                  else
-                    data["code"]
-                  end
+      ruby_code = ApiCore.export_ruby_code(data)
       filename = data["filename"] || "slide_#{Time.now.strftime('%Y%m%d_%H%M%S')}.rb"
       filename = File.basename(filename)
-
-      if ruby_code.nil? || ruby_code.empty?
-        raise "Missing ruby code content"
-      end
 
       if data["save"] != false
         save_path = File.join(EXPORTS_DIR, filename)
@@ -359,22 +344,17 @@ module PPTApp
     # Rubyコードインポート解析処理
     def handle_import_ruby(req, res)
       data = parse_json_body(req)
-      code_text = data["code"].to_s
-      raise "Missing ruby code content" if code_text.strip.empty?
-
-      shapes = PPTApp::RubyCodeParser.parse(code_text)
       res.status = 200
       res["Content-Type"] = "application/json; charset=utf-8"
-      res.body = JSON.generate({ success: true, shapes: shapes })
+      res.body = JSON.generate(ApiCore.import_ruby(data))
     end
 
     # 数式・グラフ評価API
     def handle_math_evaluate(req, res)
       data = parse_json_body(req)
-      result = PPTApp::MathFormula.evaluate(data)
       res.status = 200
       res["Content-Type"] = "application/json; charset=utf-8"
-      res.body = JSON.generate(result)
+      res.body = JSON.generate(ApiCore.math_evaluate(data))
     end
 
     # 旧形式プロジェクト保存
