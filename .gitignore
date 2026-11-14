@@ -1,0 +1,11 @@
+# エクスポート一時出力物
+exports/*
+!exports/.gitkeep
+
+# ローカルプロジェクトデータ
+data/projects/*.json
+
+# OS・エディタ・ログ
+.DS_Store
+Thumbs.db
+*.log

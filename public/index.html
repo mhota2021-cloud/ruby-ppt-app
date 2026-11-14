@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PowerPoint Shape &amp; Text Editor (Ruby Edition)</title>
+  <link rel="stylesheet" href="css/style.css?v=20261114e">
+</head>
+<body>
+
+  <!-- 統合トップバー (PowerPoint風モダンコマンドバー) -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <div class="brand-menu-container">
+          <button type="button" id="brandMenuBtn" class="brand-icon brand-icon-btn" data-i18n-title="menu.brandTitle" title="ファイル・表示メニュー">
+            <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:#ffffff;">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+            <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:#ffffff; opacity:0.85;">
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </button>
+          <div id="brandMenuPopover" class="brand-menu-popover" style="display:none;">
+            <div class="brand-menu-section-title" data-i18n="menu.sectionFile">ファイル</div>
+            <button type="button" class="brand-menu-item" id="menuNewSlide">
+              <span data-i18n="menu.newSlide">新規スライド</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuNewAsset">
+              <span data-i18n="menu.newAsset">新規図形素材</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuOpenProjects">
+              <span data-i18n="menu.openProjects">ドキュメント一覧...</span>
+            </button>
+            <div class="brand-menu-divider"></div>
+            <button type="button" class="brand-menu-item" id="menuImport">
+              <span data-i18n="menu.import">インポート(Ruby・JSON)...</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuExport">
+              <span data-i18n="menu.export">エクスポート(SVG・PPM・Ruby・JSON)...</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuViewRuby">
+              <span data-i18n="menu.viewRuby">Rubyコードを表示...</span>
+            </button>
+            <div class="brand-menu-divider"></div>
+            <div class="brand-menu-section-title" data-i18n="menu.sectionCanvas">キャンバス</div>
+            <button type="button" class="brand-menu-item" id="menuAddFrame">
+              <span data-i18n="menu.addFrame">フレームを追加</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuFrameSelected">
+              <span data-i18n="menu.frameSelected">選択をフレーム化</span>
+              <span class="brand-menu-badge">Ctrl+Alt+G</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuAutoLayoutSelected">
+              <span data-i18n="menu.autoLayout">オートレイアウト切替</span>
+              <span class="brand-menu-badge">Shift+A</span>
+            </button>
+            <div class="brand-menu-divider"></div>
+            <button type="button" class="brand-menu-item" id="menuToggleGrid">
+              <span data-i18n="menu.grid">グリッド線</span>
+              <span id="menuGridState" class="brand-menu-badge">ON</span>
+            </button>
+            <button type="button" class="brand-menu-item" id="menuToggleLang">
+              <span data-i18n="lang.menuLabel">言語 / Language</span>
+              <span id="menuLangBadge" class="brand-menu-badge" data-i18n="lang.badge">日本語</span>
+            </button>
+            <button type="button" class="brand-menu-item danger" id="menuClearCanvas">
+              <span data-i18n="menu.clearCanvas">キャンバスを全消去</span>
+            </button>
+          </div>
+        </div>
+        <input type="text" id="projectTitleInput" class="project-title-input" value="無題のドキュメント" data-i18n-title="header.titleInputTitle" title="タイトルをクリックして編集">
+        <div id="syncBadge" class="sync-badge offline" data-i18n-title="header.syncTitle" title="クリックして手動同期">
+          <span class="sync-dot"></span>
+          <span id="syncText" data-i18n="sync.offline">オフライン</span>
+        </div>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <!-- 履歴ツール -->
+      <div class="header-tool-group">
+        <button class="btn icon-btn header-btn" id="undoBtn" data-i18n-title="header.undoTitle" title="元に戻す(Ctrl+Z)" disabled>
+          <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button class="btn icon-btn header-btn" id="redoBtn" data-i18n-title="header.redoTitle" title="やり直し(Ctrl+Y)" disabled>
+          <svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+        </button>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <!-- 挿入ツール (図形概形ピッカー・テキスト・数式) -->
+      <div class="header-tool-group">
+        <div class="shape-picker-container">
+          <button class="btn icon-btn header-btn shape-picker-btn" id="shapePickerBtn" data-i18n-title="header.shapePickerTitle" title="図形を追加(クリックで一覧表示)">
+            <svg id="currentShapeIcon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24" style="width:10px; height:10px; margin-left:-1px;"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div id="shapePalettePopover" class="shape-palette-popover" style="display:none;"></div>
+        </div>
+        <button class="btn icon-btn header-btn" id="addTextBtn" data-i18n-title="header.addTextTitle" title="テキストを追加">
+          <svg viewBox="0 0 24 24"><path d="M5 4v3h5.5v12h3V7H19V4z"/></svg>
+        </button>
+        <button class="btn header-btn math-tool-btn" id="addMathBtn" data-i18n-title="header.addMathTitle" title="数式グラフを追加">
+          <span class="math-symbol">f(x)</span>
+        </button>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <!-- 表示補助 (グリッド) -->
+      <div class="header-tool-group">
+        <button class="btn header-btn active" id="toggleGridBtn" data-i18n-title="header.gridTitle" title="グリッド線表示切替">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/></svg>
+          <span data-i18n="header.gridBtn">グリッド</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 右側アクション -->
+    <div class="header-actions">
+      <div class="header-tool-group">
+        <button class="btn header-btn" id="projectManagerBtn" data-i18n-title="header.projectsTitle" title="プロジェクト一覧・新規作成">
+          <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          <span data-i18n="header.projects">ドキュメント一覧</span>
+        </button>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <div class="header-tool-group">
+        <button class="btn header-btn" id="importModalBtn" data-i18n-title="header.importTitle" title="RubyコードまたはJSONファイルをインポート">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          <span data-i18n="header.import">インポート</span>
+        </button>
+        <button class="btn header-btn" id="exportModalBtn" data-i18n-title="header.exportTitle" title="SVG/PPM/Ruby/JSON形式でエクスポート">
+          <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+          <span data-i18n="header.export">エクスポート</span>
+        </button>
+      </div>
+
+      <div class="header-divider"></div>
+
+      <div class="header-tool-group">
+        <button class="btn header-btn" id="viewRubyCodeBtn" data-i18n-title="header.rubyCodeTitle" title="基礎プログラミング準拠のRubyコードを表示">
+          <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+          <span data-i18n="header.rubyCode">Rubyコード</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- メイン作業エリア -->
+  <div class="workspace">
+    <!-- 左側レイヤーパネル -->
+    <aside class="layers-panel" id="layersPanel">
+      <div class="panel-header layers-header">
+        <span data-i18n="layers.header">レイヤー</span>
+      </div>
+      <div class="layers-list" id="layersList"></div>
+    </aside>
+
+    <!-- キャンバスエリア -->
+    <div class="canvas-container">
+      <div class="slide-canvas-wrapper">
+        <canvas id="slideCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- 右側プロパティパネル -->
+    <aside class="property-panel" id="propertyPanel">
+      <div class="panel-header">
+        <span data-i18n="panel.header">書式・変形プロパティ</span>
+        <span id="shapeNameLabel" style="font-size:12px; color:var(--text-muted); font-weight:normal;"></span>
+      </div>
+
+      <div class="panel-empty" id="propertyPanelEmpty">
+        <div class="panel-section">
+          <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span data-i18n="panel.canvasSettings">キャンバス設定</span>
+            <span id="canvasDocTypeBadge" class="canvas-type-badge" data-i18n="panel.docTypeSlide">スライド</span>
+          </div>
+          <div class="prop-input-grid">
+            <div class="input-with-label">
+              <span>W</span>
+              <input type="number" id="inputCanvasW" min="50" max="3840" step="10">
+            </div>
+            <div class="input-with-label">
+              <span>H</span>
+              <input type="number" id="inputCanvasH" min="50" max="3840" step="10">
+            </div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-accent" id="applyCanvasSizeBtn" style="flex:1; font-size:12px;" data-i18n="panel.applySize">サイズ適用</button>
+            <button type="button" class="btn" id="swapCanvasSizeBtn" data-i18n="panel.swapSize" data-i18n-title="panel.swapSizeTitle" title="幅と高さを入れ替え" style="font-size:12px;">縦横入替</button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title" data-i18n="panel.sizePresets">サイズプリセット</div>
+          <div class="canvas-preset-grid" id="canvasPresetGrid">
+            <button type="button" class="btn canvas-preset-btn" data-w="300" data-h="200"><span data-i18n="panel.presetHomework">授業課題</span><small>300x200</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="960" data-h="540"><span data-i18n="panel.presetSlide169">16:9標準</span><small>960x540</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="1280" data-h="720"><span data-i18n="panel.presetSlide169Hd">16:9HD</span><small>1280x720</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="800" data-h="600"><span data-i18n="panel.presetSlide43">4:3標準</span><small>800x600</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="200" data-h="200"><span data-i18n="panel.presetAssetS">素材S</span><small>200x200</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="400" data-h="400"><span data-i18n="panel.presetAssetM">素材M</span><small>400x400</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="800" data-h="800"><span data-i18n="panel.presetAssetL">素材L</span><small>800x800</small></button>
+            <button type="button" class="btn canvas-preset-btn" data-w="1080" data-h="1080"><span data-i18n="panel.presetSquareHd">正方形HD</span><small>1080x1080</small></button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title" data-i18n="panel.background">背景</div>
+          <div class="prop-row">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" id="checkCanvasTransparent"> <span data-i18n="panel.transparentBg">透過背景にする</span>
+            </label>
+          </div>
+          <div class="prop-row" id="canvasBgColorRow" style="margin-top:6px;">
+            <span class="prop-label" data-i18n="panel.bgColor">背景色</span>
+            <input type="color" id="inputCanvasBg" value="#ffffff" style="width:44px; height:28px;">
+          </div>
+        </div>
+
+        <div style="padding:16px; text-align:center; color:var(--text-muted); font-size:12px;" data-i18n="panel.emptyHint">
+          図形またはテキストを選択すると、個別の変形やスタイルを調整できます。
+        </div>
+      </div>
+
+      <div class="panel-content" id="propertyPanelContent" style="display:none;">
+        <div id="lockedSelectionBanner" class="locked-selection-banner" style="display:none;">
+          <span data-i18n="panel.lockedNotice">ロック中のため編集できません</span>
+          <button type="button" class="btn" id="btnUnlockSelected" style="padding:3px 8px; font-size:11px;" data-i18n="panel.unlock">解除</button>
+        </div>
+        <!-- 複数選択アクション -->
+        <div class="panel-section" id="multiSelectSection" style="display:none; background:#f8fafc;">
+          <div class="section-title" id="multiSelectTitle" data-i18n="panel.multiSelect">複数選択</div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn" id="propFrameMultiBtn" style="flex:1; font-size:12px; padding:5px 8px;" data-i18n="panel.frameSelected">フレーム化</button>
+            <button type="button" class="btn btn-accent" id="propAutoLayoutMultiBtn" style="flex:1; font-size:12px; padding:5px 8px;" data-i18n="panel.autoLayout">オートレイアウト</button>
+          </div>
+        </div>
+
+        <!-- 親フレーム内の子設定 -->
+        <div class="panel-section" id="childLayoutSection" style="display:none; background:#f5f3ff;">
+          <div class="section-title" style="color:#6d28d9;" data-i18n="panel.childLayoutSection">フレーム内の配置</div>
+          <div class="prop-row">
+            <span class="prop-label" id="childParentNameLabel" style="font-size:12px; font-weight:600; color:#4c1d95;"></span>
+            <button type="button" class="btn" id="btnRemoveFromFrame" style="padding:3px 8px; font-size:11px;" data-i18n="panel.removeFromFrame">枠から出す</button>
+          </div>
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button type="button" class="btn" id="btnChildMovePrev" style="flex:1; padding:4px 6px; font-size:12px;" data-i18n="panel.orderPrev">前へ</button>
+            <button type="button" class="btn" id="btnChildMoveNext" style="flex:1; padding:4px 6px; font-size:12px;" data-i18n="panel.orderNext">後へ</button>
+          </div>
+          <div id="childAbsolutePosRow" class="prop-row" style="display:none; margin-bottom:8px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; color:#4c1d95; font-weight:600;">
+              <input type="checkbox" id="checkChildAbsolutePos">
+              <span data-i18n="panel.absolutePosition">絶対配置 (Auto Layoutから除外)</span>
+            </label>
+          </div>
+          <div id="childAutoLayoutSizingRow" class="prop-input-grid" style="display:none; margin-bottom:8px;">
+            <div>
+              <span class="prop-label" style="display:block; font-size:11px; margin-bottom:2px;" data-i18n="panel.childSizingH">幅の伸縮</span>
+              <select id="selectChildSizingH" class="select-dropdown" style="width:100%;">
+                <option value="fixed" data-i18n="panel.sizingFixed">固定(Fixed)</option>
+                <option value="fill" data-i18n="panel.sizingFill">枠に合わせる(Fill)</option>
+                <option value="hug" data-i18n="panel.sizingHug">中身に合わせる(Hug)</option>
+              </select>
+            </div>
+            <div>
+              <span class="prop-label" style="display:block; font-size:11px; margin-bottom:2px;" data-i18n="panel.childSizingV">高さの伸縮</span>
+              <select id="selectChildSizingV" class="select-dropdown" style="width:100%;">
+                <option value="fixed" data-i18n="panel.sizingFixed">固定(Fixed)</option>
+                <option value="fill" data-i18n="panel.sizingFill">枠に合わせる(Fill)</option>
+                <option value="hug" data-i18n="panel.sizingHug">中身に合わせる(Hug)</option>
+              </select>
+            </div>
+          </div>
+          <div id="constraintsSection" style="display:none; margin-top:6px; padding-top:8px; border-top:1px dashed #ddd6fe;">
+            <div style="font-size:11px; font-weight:600; color:#5b21b6; margin-bottom:2px;" data-i18n="panel.constraintsSection">制約 (Constraints)</div>
+            <div class="constraints-widget">
+              <div class="constraints-cross" id="constraintsDiagram">
+                <div class="constraints-inner-box"></div>
+                <button type="button" class="constraint-tick edge-top" data-edge="top" title="Top"></button>
+                <button type="button" class="constraint-tick edge-bottom" data-edge="bottom" title="Bottom"></button>
+                <button type="button" class="constraint-tick edge-left" data-edge="left" title="Left"></button>
+                <button type="button" class="constraint-tick edge-right" data-edge="right" title="Right"></button>
+                <button type="button" class="constraint-tick edge-center-h" data-edge="centerH" title="Center H"></button>
+                <button type="button" class="constraint-tick edge-center-v" data-edge="centerV" title="Center V"></button>
+              </div>
+              <div class="constraints-selects">
+                <div>
+                  <span class="prop-label" style="display:block; font-size:10px; margin-bottom:2px;" data-i18n="panel.constraintH">横方向の制約</span>
+                  <select id="selectConstraintH" class="select-dropdown" style="width:100%; font-size:11px;">
+                    <option value="left" data-i18n="panel.conLeft">左</option>
+                    <option value="right" data-i18n="panel.conRight">右</option>
+                    <option value="leftright" data-i18n="panel.conLeftRight">左右</option>
+                    <option value="center" data-i18n="panel.conCenter">中央</option>
+                    <option value="scale" data-i18n="panel.conScale">拡大縮小</option>
+                  </select>
+                </div>
+                <div>
+                  <span class="prop-label" style="display:block; font-size:10px; margin-bottom:2px;" data-i18n="panel.constraintV">縦方向の制約</span>
+                  <select id="selectConstraintV" class="select-dropdown" style="width:100%; font-size:11px;">
+                    <option value="top" data-i18n="panel.conTop">上</option>
+                    <option value="bottom" data-i18n="panel.conBottom">下</option>
+                    <option value="topbottom" data-i18n="panel.conTopBottom">上下</option>
+                    <option value="center" data-i18n="panel.conCenter">中央</option>
+                    <option value="scale" data-i18n="panel.conScale">拡大縮小</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. 図形の操作 (最上部) -->
+        <div class="panel-section">
+          <div class="section-title" data-i18n="panel.shapeActions">図形の操作</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <button class="btn" id="propEditPointsBtn" style="width:100%; justify-content:center;">
+              <svg viewBox="0 0 24 24" style="width:15px; height:15px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <span id="propEditPointsLabel" data-i18n="panel.editPoints">頂点の編集</span>
+            </button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn" id="propDuplicateBtn" style="flex:1;">
+                <svg viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M19 11h-4V7h-2v4H9v2h4v4h2v-4h4v-2zm2-7H7c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H7V6h14v14z"/></svg>
+                <span data-i18n="panel.duplicate">複製</span>
+              </button>
+              <button class="btn" id="propDeleteBtn" style="flex:1; color:#ef4444;">
+                <svg viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                <span data-i18n="panel.delete">削除</span>
+              </button>
+            </div>
+            <!-- 重なり順 (前面/背面/最前面/最背面) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
+              <button class="btn" id="propBringForwardBtn" data-i18n="panel.bringForward" data-i18n-title="panel.bringForwardTitle" title="1つ前面へ移動" style="padding:4px 6px; font-size:12px;">前面へ</button>
+              <button class="btn" id="propSendBackwardBtn" data-i18n="panel.sendBackward" data-i18n-title="panel.sendBackwardTitle" title="1つ背面へ移動" style="padding:4px 6px; font-size:12px;">背面へ</button>
+              <button class="btn" id="propBringFrontBtn" data-i18n="panel.bringFront" data-i18n-title="panel.bringFrontTitle" title="最前面へ移動" style="padding:4px 6px; font-size:12px;">最前面</button>
+              <button class="btn" id="propSendBackBtn" data-i18n="panel.sendBack" data-i18n-title="panel.sendBackTitle" title="最背面へ移動" style="padding:4px 6px; font-size:12px;">最背面</button>
+            </div>
+            <!-- 反転 (水平/垂直) -->
+            <div style="display:flex; gap:6px; margin-top:2px;">
+              <button class="btn" id="propFlipHBtn" data-i18n-title="panel.flipHTitle" title="左右反転(水平)" style="flex:1; padding:4px 6px; font-size:12px;">
+                <svg viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M12 2v20M8 7l-5 5 5 5V7zm8 0l5 5-5 5V7z" stroke="currentColor" stroke-width="1.8" fill="currentColor"/></svg>
+                <span data-i18n="panel.flipH">左右反転</span>
+              </button>
+              <button class="btn" id="propFlipVBtn" data-i18n-title="panel.flipVTitle" title="上下反転(垂直)" style="flex:1; padding:4px 6px; font-size:12px;">
+                <svg viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M2 12h20M7 8l5-5 5 5H7zm0 8l5 5 5-5H7z" stroke="currentColor" stroke-width="1.8" fill="currentColor"/></svg>
+                <span data-i18n="panel.flipV">上下反転</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 幾何配置・変形 -->
+        <div class="panel-section">
+          <div class="section-title" data-i18n="panel.transform">位置とサイズ(Transform)</div>
+          <div class="prop-input-grid">
+            <div class="input-with-label"><span>X</span><input type="number" id="inputX"></div>
+            <div class="input-with-label"><span>Y</span><input type="number" id="inputY"></div>
+            <div class="input-with-label"><span>W</span><input type="number" id="inputW"></div>
+            <div class="input-with-label"><span>H</span><input type="number" id="inputH"></div>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.rotation">回転角(°)</span>
+            <div class="input-with-label" style="width:110px;">
+              <span>deg</span><input type="number" id="inputRot" min="0" max="360">
+            </div>
+          </div>
+          <div class="prop-input-grid" style="margin-top:8px;">
+            <div class="input-with-label" data-i18n-title="panel.shearXTitle" title="X軸方向シアー(傾き)"><span data-i18n="panel.shearX">傾X</span><input type="number" id="inputShearX" step="5" min="-75" max="75"></div>
+            <div class="input-with-label" data-i18n-title="panel.shearYTitle" title="Y軸方向シアー(傾き)"><span data-i18n="panel.shearY">傾Y</span><input type="number" id="inputShearY" step="5" min="-75" max="75"></div>
+          </div>
+          <div id="minMaxSection" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
+            <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:6px;" data-i18n="panel.minMaxSection">最小 / 最大サイズ (Min/Max)</div>
+            <div class="prop-input-grid" style="margin-bottom:0;">
+              <div class="input-with-label"><span>MinW</span><input type="number" id="inputMinW" min="0" placeholder="-"></div>
+              <div class="input-with-label"><span>MaxW</span><input type="number" id="inputMaxW" min="0" placeholder="-"></div>
+              <div class="input-with-label"><span>MinH</span><input type="number" id="inputMinH" min="0" placeholder="-"></div>
+              <div class="input-with-label"><span>MaxH</span><input type="number" id="inputMaxH" min="0" placeholder="-"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 頂点編集専用セクション -->
+        <div class="panel-section" id="pointEditSection" style="display:none; background:#eff6ff;">
+          <div class="section-title" style="color:var(--accent-blue);" data-i18n="panel.editPointsSection">頂点の編集(Edit Points)</div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.pointType">頂点タイプ</span>
+            <select id="pointTypeSelect" class="select-dropdown" style="width:130px;">
+              <option value="corner" data-i18n="panel.pointCorner">頂点基準(角)</option>
+              <option value="straight" data-i18n="panel.pointStraight">直線点(半連動)</option>
+              <option value="smooth" data-i18n="panel.pointSmooth">スムーズ(対称)</option>
+            </select>
+          </div>
+          <div class="prop-row" style="margin-top:8px;">
+            <button class="btn" id="deletePointBtn" style="width:100%; color:#dc2626; border-color:#fca5a5;" data-i18n="panel.deletePoint">
+              選択頂点を削除
+            </button>
+          </div>
+          <div style="font-size:11px; color:#6b7280; margin-top:8px; line-height:1.4;" data-i18n="panel.pointHint">
+            ※黒い四角形をドラッグして頂点移動、青い丸でベジェ曲率変更。
+          </div>
+        </div>
+
+        <!-- 塗りつぶし・枠線 -->
+        <div class="panel-section">
+          <div class="section-title" data-i18n="panel.fillStroke">塗りつぶしと枠線</div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.fillColor">塗り色</span>
+            <div class="color-picker-wrapper">
+              <input type="color" id="inputFill">
+              <input type="text" id="inputFillHex" class="color-hex-input" maxlength="7" placeholder="#3b82f6" aria-label="Fill hex">
+            </div>
+          </div>
+          <div class="color-swatch-row" id="fillSwatchRow">
+            <button type="button" class="color-swatch-btn" data-color="#3b82f6" style="background:#3b82f6;" title="#3b82f6"></button>
+            <button type="button" class="color-swatch-btn" data-color="#ef4444" style="background:#ef4444;" title="#ef4444"></button>
+            <button type="button" class="color-swatch-btn" data-color="#10b981" style="background:#10b981;" title="#10b981"></button>
+            <button type="button" class="color-swatch-btn" data-color="#f59e0b" style="background:#f59e0b;" title="#f59e0b"></button>
+            <button type="button" class="color-swatch-btn" data-color="#8b5cf6" style="background:#8b5cf6;" title="#8b5cf6"></button>
+            <button type="button" class="color-swatch-btn" data-color="#1e293b" style="background:#1e293b;" title="#1e293b"></button>
+            <button type="button" class="color-swatch-btn" data-color="#94a3b8" style="background:#94a3b8;" title="#94a3b8"></button>
+            <button type="button" class="color-swatch-btn" data-color="#ffffff" style="background:#ffffff;" title="#ffffff"></button>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.opacity">不透明度(%)</span>
+            <input type="range" id="inputFillOpacity" min="0" max="100" style="width:110px;">
+          </div>
+          <div class="prop-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;">
+              <input type="checkbox" id="checkEnableStroke"> <span data-i18n="panel.enableStroke">枠線をつける</span>
+            </label>
+          </div>
+          <div id="strokeControlsContainer" style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+            <div class="prop-row">
+              <span class="prop-label" data-i18n="panel.strokeColor">枠線色</span>
+              <div class="color-picker-wrapper">
+                <input type="color" id="inputStroke">
+                <input type="text" id="inputStrokeHex" class="color-hex-input" maxlength="7" placeholder="#1d4ed8" aria-label="Stroke hex">
+              </div>
+            </div>
+            <div class="color-swatch-row" id="strokeSwatchRow">
+              <button type="button" class="color-swatch-btn" data-color="#1d4ed8" style="background:#1d4ed8;" title="#1d4ed8"></button>
+              <button type="button" class="color-swatch-btn" data-color="#dc2626" style="background:#dc2626;" title="#dc2626"></button>
+              <button type="button" class="color-swatch-btn" data-color="#059669" style="background:#059669;" title="#059669"></button>
+              <button type="button" class="color-swatch-btn" data-color="#d97706" style="background:#d97706;" title="#d97706"></button>
+              <button type="button" class="color-swatch-btn" data-color="#7c3aed" style="background:#7c3aed;" title="#7c3aed"></button>
+              <button type="button" class="color-swatch-btn" data-color="#0f172a" style="background:#0f172a;" title="#0f172a"></button>
+              <button type="button" class="color-swatch-btn" data-color="#64748b" style="background:#64748b;" title="#64748b"></button>
+              <button type="button" class="color-swatch-btn" data-color="#ffffff" style="background:#ffffff;" title="#ffffff"></button>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" data-i18n="panel.strokeWidth">太さ(px)</span>
+              <div class="input-with-label" style="width:80px;">
+                <input type="number" id="inputStrokeWidth" min="0" max="40">
+              </div>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" data-i18n="panel.strokeDash">線種</span>
+              <select id="selectStrokeDash" class="select-dropdown" style="width:110px;">
+                <option value="solid" data-i18n="panel.dashSolid">実線</option>
+                <option value="dashed" data-i18n="panel.dashDashed">破線</option>
+                <option value="dotted" data-i18n="panel.dashDotted">点線</option>
+              </select>
+            </div>
+          </div>
+          <div class="prop-row" style="margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" id="checkShadow"> <span data-i18n="panel.shadow">ドロップシャドウ</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- テキスト専用セクション -->
+        <div class="panel-section" id="textPropsSection" style="display:none;">
+          <div class="section-title" data-i18n="panel.textSection">テキスト＆変形(WordArt)</div>
+          <div class="prop-row" style="flex-direction:column; align-items:flex-start; gap:4px;">
+            <span class="prop-label" data-i18n="panel.textContent">テキスト内容</span>
+            <textarea id="inputText" rows="2" style="width:100%; padding:6px; border:1px solid var(--border-color); border-radius:4px; font-size:13px; font-family:inherit;"></textarea>
+          </div>
+          <div class="prop-row" style="margin-top:8px;">
+            <span class="prop-label" data-i18n="panel.fontSize">フォントサイズ</span>
+            <div class="input-with-label" style="width:80px;">
+              <input type="number" id="inputFontSize" min="8" max="144">
+            </div>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.fontFamily">フォント</span>
+            <select id="selectFontFamily" class="select-dropdown" style="width:130px;">
+              <option value="sans-serif" data-i18n="panel.fontSans">ゴシック/Sans</option>
+              <option value="serif" data-i18n="panel.fontSerif">明朝/Serif</option>
+              <option value="Segoe UI, sans-serif">Segoe UI</option>
+              <option value="Meiryo, sans-serif">メイリオ</option>
+              <option value="Yu Gothic, sans-serif">游ゴシック</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Times New Roman, serif">Times New Roman</option>
+              <option value="monospace" data-i18n="panel.fontMono">等幅/Monospace</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.textAlign">文字揃え</span>
+            <select id="selectTextAlign" class="select-dropdown" style="width:110px;">
+              <option value="left" data-i18n="panel.alignLeft">左揃え</option>
+              <option value="center" data-i18n="panel.alignCenter">中央揃え</option>
+              <option value="right" data-i18n="panel.alignRight">右揃え</option>
+            </select>
+          </div>
+          <!-- パワポの文字変形 (Transform / Warp) -->
+          <div class="prop-row" style="margin-top:8px;">
+            <span class="prop-label" style="font-weight:bold; color:var(--primary-color);" data-i18n="panel.textWarp">文字の変形効果</span>
+            <select id="selectTextWarp" class="select-dropdown" style="width:150px; font-weight:bold; border-color:var(--primary-color);"></select>
+          </div>
+        </div>
+
+        <!-- フレーム・オートレイアウト専用セクション -->
+        <div class="panel-section" id="framePropsSection" style="display:none;">
+          <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
+            <span data-i18n="panel.frameSection">フレーム / オートレイアウト</span>
+            <button type="button" class="btn" id="btnUnframe" style="padding:2px 8px; font-size:11px;" data-i18n="panel.unframe">枠を解除</button>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.frameName">名前</span>
+            <input type="text" id="inputFrameName" class="select-dropdown" style="width:140px; font-size:12px;">
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" data-i18n="panel.frameRadius">角丸(px)</span>
+            <div class="input-with-label" style="width:90px;">
+              <span>R</span><input type="number" id="inputFrameRadius" min="0" max="200" step="2" value="0">
+            </div>
+          </div>
+          <div class="prop-row">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="checkFrameClip"> <span data-i18n="panel.frameClip">はみ出しを切り抜く</span>
+            </label>
+          </div>
+          <div class="prop-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer; color:#5b21b6;">
+              <input type="checkbox" id="checkAutoLayoutEnabled"> <span data-i18n="panel.autoLayoutEnable">オートレイアウトを有効化</span>
+            </label>
+          </div>
+
+          <div id="autoLayoutControls" style="display:none; margin-top:8px;">
+            <div class="prop-row">
+              <span class="prop-label" data-i18n="panel.alDirection">並び方向</span>
+              <div class="al-dir-group" id="alDirectionGroup">
+                <button type="button" class="btn al-dir-btn" data-dir="row" data-i18n="panel.alRow" title="横並び">横</button>
+                <button type="button" class="btn al-dir-btn" data-dir="column" data-i18n="panel.alColumn" title="縦並び">縦</button>
+                <button type="button" class="btn al-dir-btn" data-dir="wrap" data-i18n="panel.alWrap" title="折り返し">折返</button>
+              </div>
+            </div>
+            <div class="prop-input-grid" style="margin-top:6px;">
+              <div>
+                <span class="prop-label" style="display:block; font-size:11px; margin-bottom:2px;" data-i18n="panel.alSizingH">幅モード</span>
+                <select id="selectAlSizingH" class="select-dropdown" style="width:100%;">
+                  <option value="hug" data-i18n="panel.sizingHug">中身に合わせる(Hug)</option>
+                  <option value="fixed" data-i18n="panel.sizingFixed">固定(Fixed)</option>
+                </select>
+              </div>
+              <div>
+                <span class="prop-label" style="display:block; font-size:11px; margin-bottom:2px;" data-i18n="panel.alSizingV">高さモード</span>
+                <select id="selectAlSizingV" class="select-dropdown" style="width:100%;">
+                  <option value="hug" data-i18n="panel.sizingHug">中身に合わせる(Hug)</option>
+                  <option value="fixed" data-i18n="panel.sizingFixed">固定(Fixed)</option>
+                </select>
+              </div>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" data-i18n="panel.alGap">間隔(Gap)</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <div class="input-with-label" style="width:82px;">
+                  <span>px</span><input type="number" id="inputAlGap" max="500" step="2" value="12">
+                </div>
+                <button type="button" class="btn al-gap-auto-btn" id="btnAlGapAuto" data-i18n="panel.alGapModeAuto">均等(Auto)</button>
+              </div>
+            </div>
+            <div class="prop-row" id="alCrossGapRow" style="display:none;">
+              <span class="prop-label" data-i18n="panel.alCrossGap">行間(Wrap)</span>
+              <div class="input-with-label" style="width:90px;">
+                <span>px</span><input type="number" id="inputAlCrossGap" min="0" max="500" step="2" placeholder="Gap">
+              </div>
+            </div>
+            <div style="margin-top:6px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <span class="prop-label" style="font-size:12px;" data-i18n="panel.alPadding">余白(Padding)</span>
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--text-muted);">
+                  <input type="checkbox" id="checkAlPadIndividual"> <span data-i18n="panel.alPadIndividual">4辺個別</span>
+                </label>
+              </div>
+              <div id="alPadPairInputs" class="prop-input-grid">
+                <div class="input-with-label"><span data-i18n="panel.alPadH">左右</span><input type="number" id="inputAlPadH" min="0" max="300" step="2" value="16"></div>
+                <div class="input-with-label"><span data-i18n="panel.alPadV">上下</span><input type="number" id="inputAlPadV" min="0" max="300" step="2" value="16"></div>
+              </div>
+              <div id="alPadIndividualInputs" class="prop-input-grid" style="display:none;">
+                <div class="input-with-label"><span data-i18n="panel.alPadTop">上</span><input type="number" id="inputAlPadT" min="0" max="300" step="2" value="16"></div>
+                <div class="input-with-label"><span data-i18n="panel.alPadRight">右</span><input type="number" id="inputAlPadR" min="0" max="300" step="2" value="16"></div>
+                <div class="input-with-label"><span data-i18n="panel.alPadBottom">下</span><input type="number" id="inputAlPadB" min="0" max="300" step="2" value="16"></div>
+                <div class="input-with-label"><span data-i18n="panel.alPadLeft">左</span><input type="number" id="inputAlPadL" min="0" max="300" step="2" value="16"></div>
+              </div>
+            </div>
+            <div class="prop-row" style="align-items:flex-start; margin-top:6px;">
+              <span class="prop-label" data-i18n="panel.alAlign">揃え位置</span>
+              <div class="al-align-grid" id="alAlignGrid">
+                <button type="button" class="al-align-cell" data-align="top-left" title="Top Left"></button>
+                <button type="button" class="al-align-cell" data-align="top-center" title="Top Center"></button>
+                <button type="button" class="al-align-cell" data-align="top-right" title="Top Right"></button>
+                <button type="button" class="al-align-cell" data-align="center-left" title="Center Left"></button>
+                <button type="button" class="al-align-cell" data-align="center" title="Center"></button>
+                <button type="button" class="al-align-cell" data-align="center-right" title="Center Right"></button>
+                <button type="button" class="al-align-cell" data-align="bottom-left" title="Bottom Left"></button>
+                <button type="button" class="al-align-cell" data-align="bottom-center" title="Bottom Center"></button>
+                <button type="button" class="al-align-cell" data-align="bottom-right" title="Bottom Right"></button>
+              </div>
+            </div>
+            <div class="prop-row" style="margin-top:8px;">
+              <span class="prop-label" data-i18n="panel.alStacking">重なり順</span>
+              <select id="selectAlStacking" class="select-dropdown" style="width:140px; font-size:11px;">
+                <option value="last-on-top" data-i18n="panel.alStackLast">後を前面(Last on top)</option>
+                <option value="first-on-top" data-i18n="panel.alStackFirst">先を前面(First on top)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数式グラフ専用セクション -->
+        <div class="panel-section" id="mathPropsSection" style="display:none;">
+          <div class="section-title" data-i18n="panel.mathSection">数式グラフ(y=f(x))</div>
+          <div style="margin-bottom:8px;">
+            <span class="prop-label" style="display:block; margin-bottom:4px; font-size:12px;" data-i18n="panel.mathPresets">見本プリセット</span>
+            <div id="mathPresetButtons" class="canvas-preset-grid"></div>
+          </div>
+          <div class="prop-row" style="flex-direction:column; align-items:flex-start; gap:4px;">
+            <span class="prop-label" data-i18n="panel.mathExprLabel">数式(y=)</span>
+            <div style="display:flex; gap:6px; width:100%;">
+              <input type="text" id="inputMathExpr" placeholder="sin(x)" style="flex:1; padding:6px 8px; border:1px solid var(--border-color); border-radius:4px; font-family:monospace; font-size:13px;">
+              <button type="button" id="applyMathBtn" class="btn btn-accent" style="padding:4px 10px; font-size:12px;" data-i18n="panel.mathApply">描画</button>
+            </div>
+          </div>
+          <div class="prop-input-grid" style="margin-top:8px;">
+            <div class="input-with-label">
+              <span>xMin</span>
+              <input type="text" id="inputMathXMin" value="-4" style="width:100%; border:none; outline:none; font-size:12px;">
+            </div>
+            <div class="input-with-label">
+              <span>xMax</span>
+              <input type="text" id="inputMathXMax" value="4" style="width:100%; border:none; outline:none; font-size:12px;">
+            </div>
+            <div class="input-with-label">
+              <span>yMin</span>
+              <input type="text" id="inputMathYMin" value="-3" style="width:100%; border:none; outline:none; font-size:12px;">
+            </div>
+            <div class="input-with-label">
+              <span>yMax</span>
+              <input type="text" id="inputMathYMax" value="3" style="width:100%; border:none; outline:none; font-size:12px;">
+            </div>
+          </div>
+          <div class="prop-input-grid">
+            <div class="input-with-label">
+              <span data-i18n="panel.mathSteps">分割数</span>
+              <input type="number" id="inputMathSteps" min="10" max="600" step="10" value="120">
+            </div>
+            <div class="input-with-label">
+              <span data-i18n="panel.mathLineWidth">線幅</span>
+              <input type="number" id="inputMathLineWidth" min="1" max="20" step="0.5" value="3">
+            </div>
+          </div>
+          <div class="prop-row" style="margin-top:4px;">
+            <span class="prop-label" data-i18n="panel.mathLineColor">線の色</span>
+            <input type="color" id="inputMathLineColor" value="#2563eb" style="width:44px; height:28px;">
+          </div>
+          <div class="prop-row" style="margin-top:4px; gap:10px; flex-wrap:wrap; justify-content:flex-start;">
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="checkMathShowAxes"> <span data-i18n="panel.mathShowAxes">X軸・Y軸</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="checkMathShowFrame"> <span data-i18n="panel.mathShowFrame">枠を表示</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="checkMathEqualAspect" checked> <span data-i18n="panel.mathEqualAspect">縦横1:1を保つ</span>
+            </label>
+          </div>
+          <div id="mathErrorBox" style="display:none; margin-top:6px; padding:6px 8px; background:#fee2e2; color:#b91c1c; border-radius:4px; font-size:12px;"></div>
+          <div style="margin-top:8px;">
+            <span class="prop-label" style="display:block; font-size:11px; margin-bottom:2px;" data-i18n="panel.mathRubyExpr">変換されたRuby式</span>
+            <code id="mathRubyExprPreview" style="display:block; padding:6px 8px; background:#0f172a; color:#f8fafc; border-radius:4px; font-size:12px; word-break:break-all;">Math.sin(x)</code>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </div>
+
+  <!-- ステータスバー -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <span id="statusDocInfo" class="status-doc-btn" data-i18n-title="status.docSizeTitle" title="クリックしてキャンバスサイズ設定を表示">スライド寸法: 960 x 540 px</span>
+    </div>
+    <div class="status-right">
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomOutBtn">-</button>
+        <span id="zoomLabel">100%</span>
+        <button class="zoom-btn" id="zoomInBtn">+</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- プロジェクト管理モーダル -->
+  <div id="projectModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container">
+      <div class="modal-header">
+        <span data-i18n="modal.projectsTitle">ドキュメント一覧と同期</span>
+        <button id="closeModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--text-muted);" data-i18n="modal.savedDocs">保存済みドキュメント</span>
+          <div style="display:flex; gap:6px;">
+            <button id="createNewSlideBtn" class="btn btn-accent" data-i18n="modal.newSlideBtn" data-i18n-title="modal.newSlideTitle" title="新しいスライドを作成">+ 新規スライド</button>
+            <button id="createNewAssetBtn" class="btn" data-i18n="modal.newAssetBtn" data-i18n-title="modal.newAssetTitle" title="透過背景の図形素材を作成">+ 新規図形素材</button>
+          </div>
+        </div>
+        <div id="projectListContainer" class="project-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rubyコード表示モーダル -->
+  <div id="rubyCodeModal" class="modal-overlay" style="display:none;">
+    <div class="code-modal-container">
+      <div class="modal-header">
+        <span data-i18n="modal.rubyTitle">Rubyコード(基礎プログラミングおよび演習準拠)</span>
+        <button id="closeRubyCodeModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:12px;">
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;" data-i18n="modal.rubyDesc">
+          教科書(#05, #06)に登場する構造体・2次元配列・ループ・幾何計算のみで画像を生成するプログラムです。
+        </div>
+        <pre id="rubyCodePre" class="code-pre-box"></pre>
+      </div>
+      <div class="modal-footer">
+        <button id="copyRubyCodeBtn" class="btn" data-i18n="modal.copyCode">コードをコピー</button>
+        <button id="downloadRubyCodeBtn" class="btn btn-accent" data-i18n="modal.downloadRuby">.rbファイルを保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- エクスポートモーダル -->
+  <div id="exportModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width:440px;">
+      <div class="modal-header">
+        <span data-i18n="modal.exportTitle">スライドをエクスポート</span>
+        <button id="closeExportModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+          <div style="font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:8px;" data-i18n="modal.exportScope">エクスポート範囲の選択</div>
+          <div style="display:flex; gap:16px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="radio" name="exportScope" id="scopeSlide" value="slide" checked>
+              <span data-i18n="modal.scopeSlide">スライド全体</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="radio" name="exportScope" id="scopeShapes" value="shapes">
+              <span data-i18n="modal.scopeShapes">図形のみ(タイトにトリミング)</span>
+            </label>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;" data-i18n="modal.exportPrompt">
+          エクスポートするファイル形式を選択してください(複数選択可能)。
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="checkExportSvg" checked>
+            <strong data-i18n="modal.fmtSvgName">SVG形式</strong> <span data-i18n="modal.fmtSvgDesc">(スケーラブルベクター画像)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="checkExportPpmP6">
+            <strong data-i18n="modal.fmtP6Name">PPM形式(P6)</strong> <span data-i18n="modal.fmtP6Desc">(バイナリ画像・高速描画)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="checkExportPpmP3">
+            <strong data-i18n="modal.fmtP3Name">PPM形式(P3)</strong> <span data-i18n="modal.fmtP3Desc">(テキスト画像・ASCII形式)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="checkExportRuby">
+            <strong data-i18n="modal.fmtRubyName">Rubyコード(.rb)</strong> <span data-i18n="modal.fmtRubyDesc">(基礎プログラミングおよび演習準拠)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="checkExportJson">
+            <strong data-i18n="modal.fmtJsonName">JSONファイル(.json)</strong> <span data-i18n="modal.fmtJsonDesc">(プロジェクト全体のバックアップ)</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelExportBtn" class="btn" data-i18n="modal.cancel">キャンセル</button>
+        <button id="executeExportBtn" class="btn btn-accent" data-i18n="modal.executeExport">選択した形式でエクスポート</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- インポートモーダル -->
+  <div id="importModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width:540px;">
+      <div class="modal-header">
+        <span data-i18n="modal.importTitle">スライドデータのインポート</span>
+        <button id="closeImportModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <!-- タブ切替ヘッダー -->
+        <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:12px;">
+          <button id="tabImportRubyBtn" class="btn" style="border-radius:4px 4px 0 0; border-bottom:none; font-weight:bold; background:var(--panel-bg);" data-i18n="modal.tabRuby">Rubyコードからインポート</button>
+          <button id="tabImportJsonBtn" class="btn" style="border-radius:4px 4px 0 0; border-bottom:none; color:var(--text-muted); background:transparent;" data-i18n="modal.tabJson">JSONファイルからインポート</button>
+        </div>
+
+        <!-- タブ内容: Rubyコード -->
+        <div id="importRubyTabContent">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;" data-i18n="modal.importRubyDesc">
+            授業(#05, #06)または当アプリでエクスポートしたRubyコードを貼り付けるか、ファイルを選択してください。図形としてキャンバスに復元します。
+          </div>
+          <div style="margin-bottom:8px;">
+            <input type="file" id="rubyFileInput" accept=".rb,.txt" style="font-size:12px;">
+          </div>
+          <textarea id="importRubyCodeInput" rows="8" data-i18n-placeholder="modal.importRubyPlaceholder" placeholder="# Rubyコードをここに貼り付け&#10;fillrect(100, 100, 200, 150, 59, 130, 246)&#10;fillcircle(300, 200, 80, 239, 68, 68)" style="width:100%; font-family:monospace; font-size:12px; padding:8px; border:1px solid var(--border-color); border-radius:4px; box-sizing:border-box;"></textarea>
+        </div>
+
+        <!-- タブ内容: JSONファイル -->
+        <div id="importJsonTabContent" style="display:none;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;" data-i18n="modal.importJsonDesc">
+            過去に保存したスライドのJSONバックアップファイルを選択してください。
+          </div>
+          <input type="file" id="jsonFileInput2" accept=".json" style="font-size:13px; margin-top:8px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelImportBtn" class="btn" data-i18n="modal.cancel">キャンセル</button>
+        <button id="executeImportBtn" class="btn btn-accent" data-i18n="modal.executeImport">インポートを実行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右クリック コンテキストメニュー -->
+  <div id="contextMenu" class="context-menu" style="display:none;"></div>
+
+  <!-- スクリプト読み込み -->
+  <script src="js/i18n.js?v=20261114e"></script>
+  <script src="js/shapes.js?v=20261114e"></script>
+  <script src="js/edit_points.js?v=20261114e"></script>
+  <script src="js/text_warp.js?v=20261114e"></script>
+  <script src="js/canvas.js?v=20261114e"></script>
+  <script src="js/exporter.js?v=20261114e"></script>
+  <script src="js/sync_manager.js?v=20261114e"></script>
+  <script src="js/ruby_code_generator.js?v=20261114e"></script>
+  <script src="js/app.js?v=20261114e"></script>
+</body>
+</html>

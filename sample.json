@@ -1,0 +1,33 @@
+{
+  "width": 800,
+  "height": 450,
+  "backgroundColor": "#ffffff",
+  "shapes": [
+    {
+      "type": "rect",
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "fill": "#3b82f6"
+    },
+    {
+      "type": "ellipse",
+      "x": 300,
+      "y": 100,
+      "width": 150,
+      "height": 150,
+      "fill": "#ef4444"
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 300,
+      "width": 400,
+      "height": 50,
+      "text": "Hello Ruby PPM!",
+      "fontSize": 32,
+      "fill": "#1e293b"
+    }
+  ]
+}
