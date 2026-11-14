@@ -142,7 +142,7 @@ module PPTApp
         shear_x = (s["shearX"] || 0).to_f
         shear_y = (s["shearY"] || 0).to_f
         has_shear = shear_x != 0.0 || shear_y != 0.0
-        label = s["name"] || s["type"]
+        label = (s["name"] || s["type"]).to_s.gsub(/[[:cntrl:]  ]/, " ")
 
         draw_lines << "  # #{label}"
         used[:pset] = true
@@ -475,8 +475,7 @@ module PPTApp
         code << "$font_5x7 = {"
         char_list.each_with_index do |ch, idx|
           comma = idx < char_list.length - 1 ? "," : ""
-          escaped = Font5x7.escape_ruby_key(ch)
-          code << "  \"#{escaped}\" => #{FONT_5X7[ch]}#{comma}"
+          code << "  #{ch.inspect} =>#{FONT_5X7[ch]}#{comma}"
         end
         code << "}"
         code << ""
@@ -599,10 +598,9 @@ module PPTApp
       used_chars[" "] = true if used_chars.empty?
 
       if warp == "none" && rot == 0.0 && !flip_h && !flip_v && shear_x == 0.0 && shear_y == 0.0 && !raw_text.include?("\n")
-        text_str = raw_text.gsub("\\", "\\\\\\\\").gsub('"', '\\"')
         used[:draw_text] = true
         used[:fillrect] = true
-        draw_lines << "  draw_text(#{sx.round}, #{sy.round}, \"#{text_str}\", #{fill_rgb[0]}, #{fill_rgb[1]}, #{fill_rgb[2]}, #{scale})"
+        draw_lines << "  draw_text(#{sx.round}, #{sy.round}, #{raw_text.to_s.inspect}, #{fill_rgb[0]}, #{fill_rgb[1]}, #{fill_rgb[2]}, #{scale})"
         return
       end
 

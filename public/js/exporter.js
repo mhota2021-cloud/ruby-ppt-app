@@ -15,6 +15,27 @@ window.PPTExporter = (function() {
     });
   }
 
+  // 読み込んだJSONに文字列が入っていても属性を壊せないよう、SVGに埋め込む数値を有限の数に揃える
+  const NUMERIC_FIELDS = ["x", "y", "width", "height", "rotation", "shearX", "shearY",
+    "fillOpacity", "strokeWidth", "cornerRadius", "fontSize"];
+
+  function toFiniteNumber(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function sanitizeShapeNumbers(s) {
+    const c = { ...s };
+    NUMERIC_FIELDS.forEach(f => {
+      if (c[f] !== undefined && c[f] !== null) c[f] = toFiniteNumber(c[f]);
+    });
+    ["x", "y", "width", "height"].forEach(f => { c[f] = toFiniteNumber(c[f]); });
+    if (c.mathConfig && c.mathConfig.lineWidth !== undefined) {
+      c.mathConfig = { ...c.mathConfig, lineWidth: toFiniteNumber(c.mathConfig.lineWidth, 3) };
+    }
+    return c;
+  }
+
   // 親を含めて表示状態の描画順リストを取得
   function getVisibleOrderedShapes(canvasInstance) {
     const raw = (canvasInstance && Array.isArray(canvasInstance.shapes)) ? canvasInstance.shapes : [];
@@ -61,13 +82,13 @@ window.PPTExporter = (function() {
 
   // --- 1. SVG生成 ---
   function buildSvgString(canvasInstance, options = {}) {
-    let width = canvasInstance.width;
-    let height = canvasInstance.height;
+    let width = toFiniteNumber(canvasInstance.width, 960);
+    let height = toFiniteNumber(canvasInstance.height, 540);
     let bg = canvasInstance.backgroundColor || "#ffffff";
     let offsetX = 0;
     let offsetY = 0;
 
-    const visibleShapes = getVisibleOrderedShapes(canvasInstance);
+    const visibleShapes = getVisibleOrderedShapes(canvasInstance).map(sanitizeShapeNumbers);
 
     if (options.cropToShapes) {
       const bbox = getShapesBoundingBox(visibleShapes, 10);

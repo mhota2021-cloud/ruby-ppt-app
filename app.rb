@@ -54,19 +54,24 @@ module PPTApp
 
   # WebAPIサーブレット
   class ApiServlet < WEBrick::HTTPServlet::AbstractServlet
-    def set_cors_headers(res)
-      res["Access-Control-Allow-Origin"] = "*"
-      res["Access-Control-Allow-Methods"] = "POST, GET, DELETE, OPTIONS"
-      res["Access-Control-Allow-Headers"] = "Content-Type"
-    end
+    LOCAL_HOSTS = %w[localhost 127.0.0.1 [::1]].freeze
 
-    def do_OPTIONS(req, res)
-      set_cors_headers(res)
-      res.status = 200
+    # 自分のPCで開いたページ以外（別サイト・別端末・DNSリバインディング）からの呼び出しを拒否する
+    def service(req, res)
+      host = req.host.to_s.downcase
+      host = "[#{host}]" if host.include?(":") && !host.start_with?("[")
+      origin = req["Origin"]
+      allowed_origin = origin.nil? || LOCAL_HOSTS.any? { |h| origin == "http://#{h}:#{req.port}" }
+      unless LOCAL_HOSTS.include?(host) && allowed_origin
+        res.status = 403
+        res["Content-Type"] = "application/json; charset=utf-8"
+        res.body = JSON.generate({ error: "Forbidden" })
+        return
+      end
+      super
     end
 
     def do_GET(req, res)
-      set_cors_headers(res)
       path = req.path
 
       if path == "/api/sync/status"
@@ -96,7 +101,6 @@ module PPTApp
     end
 
     def do_POST(req, res)
-      set_cors_headers(res)
       path = req.path
 
       case path
@@ -129,7 +133,6 @@ module PPTApp
     end
 
     def do_DELETE(req, res)
-      set_cors_headers(res)
       path = req.path
 
       if path.start_with?("/api/sync/projects/")
@@ -149,7 +152,11 @@ module PPTApp
     def handle_error(e, res)
       res.status = 500
       res["Content-Type"] = "application/json; charset=utf-8"
-      res.body = JSON.generate({ error: e.message, backtrace: e.backtrace.first(5) })
+      warn "[API] #{e.class}: #{e.message}"
+      warn e.backtrace.first(5).join("\n") if e.backtrace
+      # 自分でraiseした入力エラー（RuntimeError・FormulaError）だけ文言を返し、それ以外は内部情報を伏せる
+      message = e.instance_of?(RuntimeError) || e.class.name.to_s.end_with?("FormulaError") ? e.message : "Internal server error"
+      res.body = JSON.generate({ error: message })
     end
 
     def parse_json_body(req)
@@ -292,7 +299,7 @@ module PPTApp
       res.status = 200
       res["Content-Type"] = "application/x-portable-pixmap"
       res["Content-Disposition"] = %(attachment; filename="#{filename}")
-      res["X-Saved-Path"] = save_path
+      res["X-Saved-Path"] = "exports/#{filename}"
       res.body = ppm_data
     end
 
@@ -315,7 +322,7 @@ module PPTApp
       res.status = 200
       res["Content-Type"] = "image/svg+xml; charset=utf-8"
       res["Content-Disposition"] = %(attachment; filename="#{filename}")
-      res["X-Saved-Path"] = save_path
+      res["X-Saved-Path"] = "exports/#{filename}"
       res.body = formatted_svg
     end
 
@@ -340,7 +347,7 @@ module PPTApp
       if data["save"] != false
         save_path = File.join(EXPORTS_DIR, filename)
         File.write(save_path, ruby_code, encoding: "utf-8")
-        res["X-Saved-Path"] = save_path
+        res["X-Saved-Path"] = "exports/#{filename}"
       end
 
       res.status = 200
@@ -401,6 +408,7 @@ module PPTApp
 
     server = WEBrick::HTTPServer.new(
       Port: port,
+      BindAddress: "127.0.0.1",
       Logger: WEBrick::Log.new($stderr, WEBrick::Log::WARN),
       AccessLog: []
     )
